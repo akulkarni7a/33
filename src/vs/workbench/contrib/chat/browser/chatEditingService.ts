@@ -86,7 +86,8 @@ export class ChatEditingService extends Disposable implements IChatEditingServic
 			return decidedEntries.map(entry => entry.entryId);
 		}));
 		this._chatService.onDidDisposeSession((e) => {
-			if (e.reason === 'cleared' && this._currentSessionObs.get()?.chatSessionId === e.sessionId) {
+			const currentSession = this._currentSessionObs.get();
+			if (currentSession?.chatSessionId === e.sessionId) {
 				this.killCurrentEditingSession();
 			}
 		});
@@ -179,6 +180,12 @@ export class ChatEditingService extends Disposable implements IChatEditingServic
 	killCurrentEditingSession() {
 		const currentSession = this._currentSessionObs.get();
 		if (currentSession) {
+			// Close all editors associated with this session
+			const groupedEditors = this._findGroupedEditors();
+			for (const [group, editor] of groupedEditors) {
+				group.closeEditor(editor, { preserveFocus: true });
+			}
+			
 			this._onDidDisposeEditingSession.fire(currentSession);
 			currentSession.dispose();
 			this._currentSessionObs.set(null, undefined);
